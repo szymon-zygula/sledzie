@@ -1,15 +1,16 @@
+#[derive(Clone, Debug)]
 pub struct Graph {
     edges: Vec<Vec<Edge>>,
     weights: Vec<f64>,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum EdgeDir {
     Forward,
     Backward,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Edge {
     dir: EdgeDir,
     second: usize,
@@ -61,12 +62,29 @@ impl Graph {
             .collect()
     }
 
-    pub fn children(&self, vertex: usize) -> Vec<usize> {
+    pub fn following(&self, vertex: usize) -> Vec<usize> {
         self.directed_neighbors(vertex, EdgeDir::Forward)
     }
 
-    pub fn parents(&self, vertex: usize) -> Vec<usize> {
+    pub fn followers(&self, vertex: usize) -> Vec<usize> {
         self.directed_neighbors(vertex, EdgeDir::Backward)
+    }
+
+    pub fn ends(&self, dir: EdgeDir) -> Vec<usize> {
+        self.edges
+            .iter()
+            .enumerate()
+            .filter(|(_, edges)| edges.iter().filter(|e| e.dir == dir).count() == 0)
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
+    pub fn followerless(&self) -> Vec<usize> {
+        self.ends(EdgeDir::Backward)
+    }
+
+    pub fn followless(&self) -> Vec<usize> {
+        self.ends(EdgeDir::Forward)
     }
 
     pub fn add_edge(&mut self, from: usize, to: usize) {
