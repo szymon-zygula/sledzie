@@ -1,35 +1,92 @@
 pub struct Graph {
-    edges: Vec<Vec<usize>>,
+    edges: Vec<Vec<Edge>>,
     weights: Vec<f64>,
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum EdgeDir {
+    Forward,
+    Backward,
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct Edge {
+    dir: EdgeDir,
+    second: usize,
+}
+
+impl Edge {
+    pub fn forward(second: usize) -> Self {
+        Self {
+            second,
+            dir: EdgeDir::Forward,
+        }
+    }
+
+    pub fn backward(second: usize) -> Self {
+        Self {
+            second,
+            dir: EdgeDir::Backward,
+        }
+    }
 }
 
 impl Graph {
     pub fn new(weights: Vec<f64>) -> Graph {
         Graph {
-            edges: vec![vec![]; weights.len() + 1],
+            edges: vec![vec![]; weights.len()],
             weights,
         }
     }
 
+    pub fn with_edges(weights: Vec<f64>, edges: &[(usize, usize)]) -> Self {
+        let mut graph = Self::new(weights);
+        for &(from, to) in edges {
+            graph.add_edge(from, to);
+        }
+
+        graph
+    }
+
     pub fn vertex_count(&self) -> usize {
-        self.edges.len() - 1
+        self.weights.len()
     }
 
-    pub fn add_edge(&mut self, vertex1: usize, vertex2: usize) {
-        self.edges[vertex1].push(vertex2);
+    pub fn directed_neighbors(&self, vertex: usize, direction: EdgeDir) -> Vec<usize> {
+        self.edges[vertex]
+            .iter()
+            .copied()
+            .filter(|e| e.dir == direction)
+            .map(|e| e.second)
+            .collect()
     }
 
-    pub fn neighbors(&self, vertex: usize) -> &[usize] {
-        &self.edges[vertex]
+    pub fn children(&self, vertex: usize) -> Vec<usize> {
+        self.directed_neighbors(vertex, EdgeDir::Forward)
+    }
+
+    pub fn parents(&self, vertex: usize) -> Vec<usize> {
+        self.directed_neighbors(vertex, EdgeDir::Backward)
+    }
+
+    pub fn add_edge(&mut self, from: usize, to: usize) {
+        self.edges[from].push(Edge::forward(to));
+        self.edges[to].push(Edge::backward(from));
+    }
+
+    pub fn neighbors(&self, vertex: usize) -> Vec<usize> {
+        self.edges[vertex].iter().map(|e| e.second).collect()
     }
 
     pub fn weight(&self, vertex: usize) -> f64 {
         self.weights[vertex]
     }
 
-    pub fn copy_without_edge(&self, vertex1: usize, vertex2: usize) -> Graph {
+    pub fn copy_without_edge(&self, from: usize, to: usize) -> Graph {
         let mut new_edges = self.edges.clone();
-        new_edges[vertex1].retain(|&x| x != vertex2);
+        new_edges[from].retain(|&e| e.second != to || e.dir != EdgeDir::Forward);
+        new_edges[to].retain(|&e| e.second != from || e.dir != EdgeDir::Backward);
+
         Graph {
             edges: new_edges,
             weights: self.weights.clone(),
@@ -39,11 +96,14 @@ impl Graph {
     pub fn copy_without_vertex(&self, vertex: usize) -> Graph {
         let mut new_edges = self.edges.clone();
         new_edges.remove(vertex);
-        for i in 0..new_edges.len() {
-            new_edges[i].retain(|&x| x != vertex);
+
+        for edges in &mut new_edges {
+            edges.retain(|&x| x.second != vertex);
         }
+
         let mut new_weights = self.weights.clone();
         new_weights.remove(vertex);
+
         Graph {
             edges: new_edges,
             weights: new_weights,
