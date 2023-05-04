@@ -73,9 +73,18 @@ fn herring_comp(graph: &Graph) -> HerringResult {
 }
 
 fn herring_comp_with_cycle(graph: &Graph, cycle_edge: (usize, usize)) -> HerringResult {
-    HerringResult {
-        weight: 0.0,
-        vertices: LinkedList::new(),
+    let (u, v) = cycle_edge;
+    let graph = graph.copy_without_edge(u, v);
+    let graph_u = graph.copy_without_vertex(u);
+    let graph_v = graph.copy_without_vertex(v);
+
+    let res_u = herring_alg(&graph_u);
+    let res_v = herring_alg(&graph_v);
+
+    if res_u.weight > res_v.weight {
+        res_u
+    } else {
+        res_v
     }
 }
 
